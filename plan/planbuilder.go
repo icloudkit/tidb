@@ -111,6 +111,9 @@ func (b *planBuilder) build(node ast.Node) Plan {
 		}
 		return b.buildUnion(x)
 	case *ast.UpdateStmt:
+		if UseNewPlanner {
+			return b.buildNewUpdate(x)
+		}
 		return b.buildUpdate(x)
 	case *ast.UseStmt:
 		return b.buildSimple(x)
@@ -944,6 +947,10 @@ func (b *planBuilder) buildUpdate(update *ast.UpdateStmt) Plan {
 }
 
 func (b *planBuilder) buildUpdateLists(list []*ast.Assignment, fields []*ast.ResultField) []*ast.Assignment {
+	log.Warn(len(fields))
+	for _,v := range fields {
+		log.Warn(v)
+	}
 	newList := make([]*ast.Assignment, len(fields))
 	for _, assign := range list {
 		offset, err := columnOffsetInFields(assign.Column, fields)

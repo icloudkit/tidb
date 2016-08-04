@@ -138,6 +138,14 @@ type NewSort struct {
 	ExecLimit *Limit
 }
 
+// NewUpdate represents NewUpdate plan.
+type NewUpdate struct {
+	baseLogicalPlan
+
+	SelectPlan Plan
+	OrderedList []*ast.Assignment
+}
+
 // AddChild for parent.
 func addChild(parent Plan, child Plan) {
 	if child == nil || parent == nil {

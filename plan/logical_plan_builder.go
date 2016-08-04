@@ -1006,3 +1006,68 @@ func (b *planBuilder) buildSemiJoin(outerPlan, innerPlan LogicalPlan, onConditio
 	innerPlan.SetParents(joinPlan)
 	return joinPlan
 }
+
+func (b *planBuilder) buildNewUpdate(update *ast.UpdateStmt) LogicalPlan {
+	sel := &ast.SelectStmt{Fields: &ast.FieldList{}, From: update.TableRefs, Where: update.Where, OrderBy: update.Order, Limit: update.Limit}
+
+	var p LogicalPlan
+
+	if sel.From != nil {
+		p = b.buildResultSetNode(sel.From.TableRefs)
+		if b.err != nil {
+			return nil
+		}
+	} else {
+		return nil
+	}
+
+	_, _ = b.resolveHavingAndOrderBy(sel, p)
+
+	if sel.Where != nil {
+		p = b.buildSelection(p, sel.Where, nil)
+		if b.err != nil {
+			return nil
+		}
+	}
+
+
+	if sel.OrderBy != nil {
+		p = b.buildNewSort(p, sel.OrderBy.Items, nil)
+		if b.err != nil {
+			return nil
+		}
+	}
+	if sel.Limit != nil {
+		p = b.buildNewLimit(p, sel.Limit)
+		if b.err != nil {
+			return nil
+		}
+	}
+
+	orderedList := b.buildNewUpdateLists(update.List, p.GetSchema())
+	updt := &NewUpdate{OrderedList: orderedList, SelectPlan: p}
+	addChild(updt, p)
+	return updt
+}
+
+func (b *planBuilder) buildNewUpdateLists(list []*ast.Assignment, schemas expression.Schema) []*ast.Assignment {
+	newList := make([]*ast.Assignment, len(schemas))
+	for _, assign := range list{
+		col, err := schemas.FindColumn(assign.Column)
+		if err != nil {
+			b.err = errors.Trace(err)
+			return nil
+		}
+		offset := schemas.GetIndex(col)
+		newList[offset] = assign
+	}
+	return newList
+}
+/*
+func columnOffsetInSchemas(cn *ast.ColumnName, schemas []*expression.Column) (int, error) {
+	offset := -1
+		for i, f := range schemas {
+			f.Re
+	}
+
+}*/

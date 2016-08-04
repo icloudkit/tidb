@@ -55,6 +55,7 @@ func Optimize(ctx context.Context, node ast.Node, sb SubQueryBuilder, is infosch
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
+		log.Warn(ToString(p))
 		_, res, _, err := logic.convert2PhysicalPlan(nil)
 		if err != nil {
 			return nil, errors.Trace(err)

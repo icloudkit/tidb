@@ -411,3 +411,4 @@ func (b *executorBuilder) buildNewUnion(v *plan.NewUnion) Executor {
 	}
 	return e
 }
+

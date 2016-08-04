@@ -41,6 +41,11 @@ type Expression interface {
 	ToString() string
 }
 
+type Assignment struct {
+	Col	*Column
+	Expr	Expression
+}
+
 // EvalBool evaluates expression to a boolean value.
 func EvalBool(expr Expression, row []types.Datum, ctx context.Context) (bool, error) {
 	data, err := expr.Eval(row, ctx)

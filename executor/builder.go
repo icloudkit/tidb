@@ -112,6 +112,8 @@ func (b *executorBuilder) build(p plan.Plan) Executor {
 		return b.buildNewUnion(v)
 	case *plan.Update:
 		return b.buildUpdate(v)
+	case *plan.NewUpdate:
+		return b.buildNewUpdate(v)
 	case *plan.PhysicalHashJoin:
 		return b.buildJoin(v)
 	case *plan.PhysicalHashSemiJoin:
@@ -543,6 +545,13 @@ func (b *executorBuilder) buildExecute(v *plan.Execute) Executor {
 
 func (b *executorBuilder) buildUpdate(v *plan.Update) Executor {
 	selExec := b.build(v.SelectPlan)
+	return &UpdateExec{ctx: b.ctx, SelectExec: selExec, OrderedList: v.OrderedList}
+}
+
+
+func (b *executorBuilder) buildNewUpdate (v *plan.NewUpdate) Executor {
+	selExec := b.build(v.SelectPlan)
+
 	return &UpdateExec{ctx: b.ctx, SelectExec: selExec, OrderedList: v.OrderedList}
 }
 
