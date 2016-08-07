@@ -1030,7 +1030,6 @@ func (b *planBuilder) buildNewUpdate(update *ast.UpdateStmt) LogicalPlan {
 		}
 	}
 
-
 	if sel.OrderBy != nil {
 		p = b.buildNewSort(p, sel.OrderBy.Items, nil)
 		if b.err != nil {
@@ -1044,30 +1043,46 @@ func (b *planBuilder) buildNewUpdate(update *ast.UpdateStmt) LogicalPlan {
 		}
 	}
 
-	orderedList := b.buildNewUpdateLists(update.List, p.GetSchema())
+	orderedList, np := b.buildNewUpdateLists(update.List, p)
+	if b.err != nil {
+		return nil
+	}
+	p = np
 	updt := &NewUpdate{OrderedList: orderedList, SelectPlan: p}
 	addChild(updt, p)
+
+	schema := make([]*expression.Column, 0, len(orderedList))
+	for _, v := range orderedList {
+		if v == nil {
+			continue
+		}
+		schema = append(schema, v.Col)
+	}
+
+	updt.SetSchema(schema)
 	return updt
 }
 
-func (b *planBuilder) buildNewUpdateLists(list []*ast.Assignment, schemas expression.Schema) []*ast.Assignment {
-	newList := make([]*ast.Assignment, len(schemas))
-	for _, assign := range list{
+func (b *planBuilder) buildNewUpdateLists(list []*ast.Assignment, p LogicalPlan) ([]*expression.Assignment, LogicalPlan) {
+	schemas := p.GetSchema()
+	newList := make([]*expression.Assignment, len(schemas))
+	for _, assign := range list {
 		col, err := schemas.FindColumn(assign.Column)
 		if err != nil {
 			b.err = errors.Trace(err)
-			return nil
+			return nil, nil
 		}
 		offset := schemas.GetIndex(col)
-		newList[offset] = assign
+		if offset == -1 {
+			b.err = errors.Trace(errors.Errorf("could not find column %s.%s", col.TblName, col.ColName))
+		}
+		newExpr, np, _, err := b.rewrite(assign.Expr, p, nil, false)
+		if err != nil {
+			b.err = errors.Trace(err)
+			return nil, nil
+		}
+		p = np
+		newList[offset] = &expression.Assignment{col, newExpr}
 	}
-	return newList
+	return newList, p
 }
-/*
-func columnOffsetInSchemas(cn *ast.ColumnName, schemas []*expression.Column) (int, error) {
-	offset := -1
-		for i, f := range schemas {
-			f.Re
-	}
-
-}*/

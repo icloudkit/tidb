@@ -359,8 +359,7 @@ func (p *Apply) PruneColumnsAndResolveIndices(parentUsedCols []*expression.Colum
 	return append(childOuterUsedCols, p.outerColumns...), nil
 }
 
-
 func (p *NewUpdate) PruneColumnsAndResolveIndices(parentUsedCols []*expression.Column) ([]*expression.Column, error) {
-	outer, err := p.baseLogicalPlan.PruneColumnsAndResolveIndices(parentUsedCols)
-	return outer, errors.Trace(err)
+	p.GetChildByIndex(0).GetSchema().InitIndices()
+	return nil, nil
 }

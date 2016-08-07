@@ -720,7 +720,6 @@ func (p *Insert) convert2PhysicalPlan(prop requiredProperty) (*physicalPlanInfo,
 	return addPlanToResponse(p, sortedPlanInfo), addPlanToResponse(p, unSortedPlanInfo), count, nil
 }
 
-
 // convert2PhysicalPlan implements LogicalPlan convert2PhysicalPlan interface.
 func (p *NewUpdate) convert2PhysicalPlan(prop requiredProperty) (*physicalPlanInfo, *physicalPlanInfo, uint64, error) {
 	if len(p.GetChildren()) == 0 {

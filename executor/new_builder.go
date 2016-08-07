@@ -412,3 +412,7 @@ func (b *executorBuilder) buildNewUnion(v *plan.NewUnion) Executor {
 	return e
 }
 
+func (b *executorBuilder) buildNewUpdate(v *plan.NewUpdate) Executor {
+	selExec := b.build(v.SelectPlan)
+	return &NewUpdateExec{ctx: b.ctx, SelectExec: selExec, OrderedList: v.OrderedList}
+}

@@ -947,10 +947,6 @@ func (b *planBuilder) buildUpdate(update *ast.UpdateStmt) Plan {
 }
 
 func (b *planBuilder) buildUpdateLists(list []*ast.Assignment, fields []*ast.ResultField) []*ast.Assignment {
-	log.Warn(len(fields))
-	for _,v := range fields {
-		log.Warn(v)
-	}
 	newList := make([]*ast.Assignment, len(fields))
 	for _, assign := range list {
 		offset, err := columnOffsetInFields(assign.Column, fields)

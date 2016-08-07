@@ -548,13 +548,6 @@ func (b *executorBuilder) buildUpdate(v *plan.Update) Executor {
 	return &UpdateExec{ctx: b.ctx, SelectExec: selExec, OrderedList: v.OrderedList}
 }
 
-
-func (b *executorBuilder) buildNewUpdate (v *plan.NewUpdate) Executor {
-	selExec := b.build(v.SelectPlan)
-
-	return &UpdateExec{ctx: b.ctx, SelectExec: selExec, OrderedList: v.OrderedList}
-}
-
 func (b *executorBuilder) buildDelete(v *plan.Delete) Executor {
 	selExec := b.build(v.SelectPlan)
 	return &DeleteExec{

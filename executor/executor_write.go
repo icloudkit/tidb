@@ -59,10 +59,7 @@ func (e *UpdateExec) Schema() expression.Schema {
 // Next implements Executor Next interface.
 func (e *UpdateExec) Next() (*Row, error) {
 	if !e.fetched {
-		var err error
-		if plan.UseNewPlanner {
-			err = e.newFetchRows()
-		}else{ err = e.fetchRows() }
+		err := e.fetchRows()
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -81,7 +78,6 @@ func (e *UpdateExec) Next() (*Row, error) {
 	}
 	row := e.rows[e.cursor]
 	newData := e.newRowsData[e.cursor]
-	log.Warn("%d %d", len(e.newRowsData[0]),len(e.newRowsData[1]))
 	for _, entry := range row.RowKeys {
 		tbl := entry.Tbl
 		if e.updatedRowKeys[tbl] == nil {
@@ -113,39 +109,6 @@ func getUpdateColumns(assignList []*ast.Assignment) (map[int]*ast.Assignment, er
 		m[i] = v
 	}
 	return m, nil
-}
-
-func (e *UpdateExec) newFetchRows() error {
-	for {
-		row, err := e.SelectExec.Next()
-		if err != nil {
-			return errors.Trace(err)
-		}
-		if row == nil {
-			return nil
-		}
-		data := make([]types.Datum, len(e.SelectExec.Schema()))
-		newData := make([]types.Datum, len(e.SelectExec.Schema()))
-		schemas := []*expression.Column(e.SelectExec.Schema())
-
-		for i, s := range schemas {
-			data[i], err = s.Eval(row.Data, nil)
-			if err != nil {
-				return errors.Trace(err)
-			}
-			newData[i] = data[i]
-			if e.OrderedList[i] != nil {
-				val, err := evaluator.Eval(e.ctx, e.OrderedList[i].Expr)
-				if err != nil {
-					return errors.Trace(err)
-				}
-				newData[i] = val
-			}
-		}
-		row.Data = data
-		e.rows = append(e.rows, row)
-		e.newRowsData = append(e.newRowsData, newData)
-	}
 }
 
 func (e *UpdateExec) fetchRows() error {

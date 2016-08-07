@@ -41,11 +41,6 @@ type Expression interface {
 	ToString() string
 }
 
-type Assignment struct {
-	Col	*Column
-	Expr	Expression
-}
-
 // EvalBool evaluates expression to a boolean value.
 func EvalBool(expr Expression, row []types.Datum, ctx context.Context) (bool, error) {
 	data, err := expr.Eval(row, ctx)
@@ -360,3 +355,18 @@ func ComposeCNFCondition(conditions []Expression) Expression {
 		ComposeCNFCondition(conditions[:length/2]))
 	return expr
 }
+
+type Assignment struct {
+	Col  *Column
+	Expr Expression
+}
+
+/*
+func (asgn *Assignment) AsgnToSchema () Schema{
+	var schema []*Column
+	for _, col := range asgn.Col {
+		append(schema, col)
+	}
+
+}
+*/

@@ -142,8 +142,8 @@ type NewSort struct {
 type NewUpdate struct {
 	baseLogicalPlan
 
-	SelectPlan Plan
-	OrderedList []*ast.Assignment
+	SelectPlan  Plan
+	OrderedList []*expression.Assignment
 }
 
 // AddChild for parent.

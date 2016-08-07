@@ -79,7 +79,7 @@ type Row struct {
 	RowKeys []*RowKeyEntry
 }
 
-// RowKeyEntry is designed for Delete statement in multi-table mode,
+// RowKeyEntry is designed for Update/Delete statement in multi-table mode,
 // we should know which table this row comes from.
 type RowKeyEntry struct {
 	// The table which this row come from.
