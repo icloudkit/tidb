@@ -201,10 +201,7 @@ func (b *executorBuilder) toPBExpr(conditions []expression.Expression, tbl *mode
 
 func (b *executorBuilder) buildSelection(v *plan.Selection) Executor {
 	child := v.GetChildByIndex(0)
-	if v.OldConditions != nil {
-		v.Conditions = v.OldConditions
-	}
-	v.OldConditions = v.Conditions
+	oldConditions := v.Conditions
 	var src Executor
 	switch x := child.(type) {
 	case *plan.PhysicalTableScan:
@@ -224,6 +221,7 @@ func (b *executorBuilder) buildSelection(v *plan.Selection) Executor {
 	}
 
 	if len(v.Conditions) == 0 {
+		v.Conditions = oldConditions
 		return src
 	}
 
@@ -233,7 +231,7 @@ func (b *executorBuilder) buildSelection(v *plan.Selection) Executor {
 		schema:    v.GetSchema(),
 		ctx:       b.ctx,
 	}
-	v.Conditions = v.OldConditions
+	copy(v.Conditions, oldConditions)
 	return exec
 }
 

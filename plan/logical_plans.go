@@ -73,8 +73,7 @@ type Selection struct {
 	// Originally the WHERE or ON condition is parsed into a single expression,
 	// but after we converted to CNF(Conjunctive normal form), it can be
 	// split into a list of AND conditions.
-	Conditions    []expression.Expression
-	OldConditions []expression.Expression
+	Conditions []expression.Expression
 }
 
 // Apply gets one row from outer executor and gets one row from inner executor according to outer row.
