@@ -359,7 +359,40 @@ func (p *Apply) PruneColumnsAndResolveIndices(parentUsedCols []*expression.Colum
 	return append(childOuterUsedCols, p.outerColumns...), nil
 }
 
+// PruneColumnsAndResolveIndices implements LogicalPlan PruneColumnsAndResolveIndices interface.
+// NewUpdate do not prune columns. Here we just do two things:
+// 1. resolve indices for schema
+// 2. reorder OrderedList
 func (p *NewUpdate) PruneColumnsAndResolveIndices(parentUsedCols []*expression.Column) ([]*expression.Column, error) {
-	p.GetChildByIndex(0).GetSchema().InitIndices()
-	return nil, nil
+	outer, err := p.baseLogicalPlan.PruneColumnsAndResolveIndices(p.GetSchema())
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	// column prune may reorder schema, so we re-evaluate p.Orderedlist
+	orderedList := make([]*expression.Assignment, len(p.OrderedList))
+	for _, v := range p.OrderedList {
+		if v == nil {
+			continue
+		}
+		orderedList[p.GetSchema().GetIndex(v.Col)] = v
+	}
+
+	for i := 0; i < len(orderedList); i++ {
+		if orderedList[i] == nil {
+			continue
+		}
+		orderedList[i].Col.Index = p.GetSchema().GetIndex(orderedList[i].Col)
+		switch assign := orderedList[i].Expr; assign.(type) {
+		case (*expression.Column):
+			assign.(*expression.Column).Index = p.GetSchema().GetIndex(assign.(*expression.Column))
+		case (*expression.ScalarFunction):
+			for i, args := 0, assign.(*expression.ScalarFunction).Args; i < len(args); i++ {
+				if arg, ok := args[i].(*expression.Column); ok {
+					args[i].(*expression.Column).Index = p.GetSchema().GetIndex(arg)
+				}
+			}
+		}
+	}
+	p.OrderedList = orderedList
+	return outer, nil
 }

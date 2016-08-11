@@ -356,17 +356,9 @@ func ComposeCNFCondition(conditions []Expression) Expression {
 	return expr
 }
 
+// Assignment represents a set assignment in Update, such as
+// Update t set c1 = hex(12), c2 = c3 where c2 = 1
 type Assignment struct {
 	Col  *Column
 	Expr Expression
 }
-
-/*
-func (asgn *Assignment) AsgnToSchema () Schema{
-	var schema []*Column
-	for _, col := range asgn.Col {
-		append(schema, col)
-	}
-
-}
-*/

@@ -27,7 +27,6 @@ import (
 	"github.com/pingcap/tidb/table"
 	"github.com/pingcap/tidb/terror"
 	"github.com/pingcap/tidb/util/types"
-	"github.com/prometheus/common/log"
 )
 
 var (

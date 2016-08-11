@@ -11,6 +11,7 @@ import (
 	"github.com/pingcap/tidb/util/types"
 )
 
+// NewUpdateExec represents a new update executor.
 type NewUpdateExec struct {
 	SelectExec  Executor
 	OrderedList []*expression.Assignment
@@ -25,6 +26,7 @@ type NewUpdateExec struct {
 	cursor      int
 }
 
+// Schema implements Executor Schema interface.
 func (e *NewUpdateExec) Schema() expression.Schema {
 	return nil
 }
@@ -52,11 +54,14 @@ func (e *NewUpdateExec) Next() (*Row, error) {
 	row := e.rows[e.cursor]
 	newData := e.newRowsData[e.cursor]
 	for _, entry := range row.RowKeys {
+		if entry == nil { // outer join
+			continue
+		}
 		tbl := entry.Tbl
 		if e.updatedRowKeys[tbl] == nil {
 			e.updatedRowKeys[tbl] = make(map[int64]struct{})
 		}
-		offset := e.getTableOffset(tbl)
+		offset := e.getTableOffset(*entry)
 		handle := entry.Handle
 		oldData := row.Data[offset : offset+len(tbl.WritableCols())]
 		newTableData := newData[offset : offset+len(tbl.WritableCols())]
@@ -115,11 +120,18 @@ func (e *NewUpdateExec) fetchRows() error {
 	}
 }
 
-func (e *NewUpdateExec) getTableOffset(t table.Table) int {
+func (e *NewUpdateExec) getTableOffset(entry RowKeyEntry) int {
+	t := entry.Tbl
+	var tblName string
+	if entry.TableAsName == nil || len(entry.TableAsName.L) == 0 {
+		tblName = t.Meta().Name.L
+	} else {
+		tblName = entry.TableAsName.L
+	}
 	schema := e.SelectExec.Schema()
 	for i := 0; i < len(schema); i++ {
 		s := schema[i]
-		if s.TblName.L == t.Meta().Name.L {
+		if s.TblName.L == tblName {
 			return i
 		}
 	}
