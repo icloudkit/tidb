@@ -101,6 +101,7 @@ func (e *NewXSelectIndexExec) AddAggregate(funcs []*tipb.Expr, byItems []*tipb.B
 	if !client.SupportRequestType(kv.ReqTypeIndex, kv.ReqSubTypeGroupBy) {
 		e.indexPlan.DoubleRead = true
 	}
+	log.Infof("index aggregate doulbe read %v", e.indexPlan.DoubleRead)
 }
 
 // AddLimit implements NewXExecutor interface.
