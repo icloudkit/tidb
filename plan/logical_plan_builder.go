@@ -23,7 +23,6 @@ import (
 	"github.com/pingcap/tidb/mysql"
 	"github.com/pingcap/tidb/plan/statistics"
 	"github.com/pingcap/tidb/util/types"
-	"github.com/ngaut/log"
 )
 
 // UseNewPlanner means if use the new planner.
@@ -552,44 +551,24 @@ func (a *havingAndOrderbyExprResolver) Leave(n ast.Node) (node ast.Node, ok bool
 			}
 		}
 		index := -1
-		log.Error(v.Name.Table.L, ".", v.Name.Name.L)
 		if resolveFieldsFirst {
 			index, a.err = resolveFromSelectFields(v, a.selectFields, false)
 			if a.err != nil {
 				return node, false
 			}
 			if index == -1 {
-
 				if a.orderBy {
-					log.Error("schema:")
-					for _, v := range a.p.GetSchema() {
-						log.Error(v.TblName.L, ".", v.ColName.L)
-					}
 					index, a.err = a.resolveFromSchema(v, a.p.GetSchema())
 				} else {
-					log.Error("select Fields")
-					for _, v := range a.selectFields {
-						log.Error(v.Expr.Text())
-					}
 					index, a.err = resolveFromSelectFields(v, a.selectFields, true)
 				}
 			}
 		} else {
-			log.Error("schema:")
-			for _, v := range a.p.GetSchema() {
-				log.Error(v.TblName.L, ".", v.ColName.L)
-			}
 			index, a.err = a.resolveFromSchema(v, a.p.GetSchema())
-			log.Error(v.Name.Table.L, ".", v.Name.Name.L)
-			log.Error("index=", index)
 			if a.err != nil {
 				return node, false
 			}
 			if index == -1 {
-				log.Error("select Fields")
-				for _, v := range a.selectFields {
-					log.Error(v.Expr.Text())
-				}
 				index, a.err = resolveFromSelectFields(v, a.selectFields, false)
 			}
 		}
@@ -597,9 +576,7 @@ func (a *havingAndOrderbyExprResolver) Leave(n ast.Node) (node ast.Node, ok bool
 			return node, false
 		}
 		if index == -1 {
-			log.Error("result: ")
-			log.Error(index)
-			a.err = errors.Errorf("Unknown Column %s.%s",v.Name.Table.L, v.Name.Name.L)
+			a.err = errors.Errorf("Unknown Column %s", v.Name.Name.L)
 			return node, false
 		}
 		if a.inAggFunc {
