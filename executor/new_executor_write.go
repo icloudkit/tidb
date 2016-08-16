@@ -67,9 +67,6 @@ func (e *NewUpdateExec) Next() (*Row, error) {
 	row := e.rows[e.cursor]
 	newData := e.newRowsData[e.cursor]
 	for _, entry := range row.RowKeys {
-		if entry == nil { // outer join
-			continue
-		}
 		tbl := entry.Tbl
 		if e.updatedRowKeys[tbl] == nil {
 			e.updatedRowKeys[tbl] = make(map[int64]struct{})

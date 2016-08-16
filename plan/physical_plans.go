@@ -59,6 +59,11 @@ type PhysicalTableScan struct {
 	LimitCount *int64
 }
 
+// PhysicalDummyScan is a dummy table that returns nothing.
+type PhysicalDummyScan struct {
+	basePlan
+}
+
 // PhysicalApply represents apply plan, only used for subquery.
 type PhysicalApply struct {
 	basePlan
@@ -204,6 +209,12 @@ func (p *Aggregation) Copy() PhysicalPlan {
 
 // Copy implements the PhysicalPlan Copy interface.
 func (p *NewUpdate) Copy() PhysicalPlan {
+	np := *p
+	return &np
+}
+
+// Copy implements the PhysicalPlan Copy interface.
+func (p *PhysicalDummyScan) Copy() PhysicalPlan {
 	np := *p
 	return &np
 }

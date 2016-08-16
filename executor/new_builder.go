@@ -339,9 +339,8 @@ func (b *executorBuilder) buildNewIndexScan(v *plan.PhysicalIndexScan, s *plan.S
 				ret = b.buildNewUnionScanExec(ret, expression.ComposeCNFCondition(v.AccessCondition))
 			}
 		}
-		// TODO: IndexScan doesn't support where condition push down.
 		// It will forbid limit and aggregation to push down.
-		if s != nil && v.DoubleRead {
+		if s != nil {
 			st.where, s.Conditions = b.toPBExpr(s.Conditions, st.tableInfo)
 		}
 		return ret
@@ -419,4 +418,10 @@ func (b *executorBuilder) buildNewUnion(v *plan.NewUnion) Executor {
 func (b *executorBuilder) buildNewUpdate(v *plan.NewUpdate) Executor {
 	selExec := b.build(v.SelectPlan)
 	return &NewUpdateExec{ctx: b.ctx, SelectExec: selExec, OrderedList: v.OrderedList}
+}
+
+func (b *executorBuilder) buildDummyScan(v *plan.PhysicalDummyScan) Executor {
+	return &DummyScanExec{
+		schema: v.GetSchema(),
+	}
 }
