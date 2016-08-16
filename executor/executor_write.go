@@ -92,7 +92,13 @@ func (e *UpdateExec) Next() (*Row, error) {
 			continue
 		}
 		// Update row
-		err1 := updateRecord(e.ctx, handle, oldData, newTableData, columns, tbl, offset, false)
+		touched := make(map[int]bool, len(tbl.Cols()))
+		for i, asgn := range columns {
+			if asgn == nil {
+				touched[i] = true
+			}
+		}
+		err1 := updateRecord(e.ctx, handle, oldData, newTableData, touched, tbl, offset, false)
 		if err1 != nil {
 			return nil, errors.Trace(err1)
 		}
@@ -156,14 +162,12 @@ func (e *UpdateExec) getTableOffset(t table.Table) int {
 	return 0
 }
 
-func updateRecord(ctx context.Context, h int64, oldData, newData []types.Datum, updateColumns map[int]*ast.Assignment, t table.Table, offset int, onDuplicateUpdate bool) error {
+func updateRecord(ctx context.Context, h int64, oldData, newData []types.Datum, touched map[int]bool, t table.Table, offset int, onDuplicateUpdate bool) error {
 	cols := t.Cols()
-	touched := make(map[int]bool, len(cols))
-
 	assignExists := false
 	var newHandle types.Datum
-	for i, asgn := range updateColumns {
-		if asgn == nil {
+	for i, isTouched := range touched {
+		if !isTouched {
 			continue
 		}
 		if i < offset || i >= offset+len(cols) {
@@ -783,7 +787,14 @@ func (e *InsertExec) onDuplicateUpdate(row []types.Datum, h int64, cols map[int]
 		}
 		newData[i] = val
 	}
-	if err = updateRecord(e.ctx, h, data, newData, cols, e.Table, 0, true); err != nil {
+	touched := make(map[int]bool, len(e.Table.Cols()))
+	for i, asgn := range cols {
+		if asgn != nil {
+			touched[i] = true
+		}
+	}
+
+	if err = updateRecord(e.ctx, h, data, newData, touched, e.Table, 0, true); err != nil {
 		return errors.Trace(err)
 	}
 	return nil

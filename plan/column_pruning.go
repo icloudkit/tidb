@@ -382,17 +382,20 @@ func (p *NewUpdate) PruneColumnsAndResolveIndices(parentUsedCols []*expression.C
 			continue
 		}
 		orderedList[i].Col.Index = p.GetSchema().GetIndex(orderedList[i].Col)
-		switch assign := orderedList[i].Expr; assign.(type) {
-		case (*expression.Column):
-			assign.(*expression.Column).Index = p.GetSchema().GetIndex(assign.(*expression.Column))
-		case (*expression.ScalarFunction):
-			for i, args := 0, assign.(*expression.ScalarFunction).Args; i < len(args); i++ {
-				if arg, ok := args[i].(*expression.Column); ok {
-					args[i].(*expression.Column).Index = p.GetSchema().GetIndex(arg)
-				}
-			}
-		}
+		initColumnIndexInExpr(orderedList[i].Expr, p.GetSchema())
 	}
 	p.OrderedList = orderedList
 	return outer, nil
+}
+
+func initColumnIndexInExpr(expr expression.Expression, schema expression.Schema) {
+
+	switch assign := expr; assign.(type) {
+	case (*expression.Column):
+		assign.(*expression.Column).Index = schema.GetIndex(assign.(*expression.Column))
+	case (*expression.ScalarFunction):
+		for i, args := 0, assign.(*expression.ScalarFunction).Args; i < len(args); i++ {
+			initColumnIndexInExpr(args[i], schema)
+		}
+	}
 }

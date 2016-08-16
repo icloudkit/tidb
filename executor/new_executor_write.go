@@ -18,8 +18,6 @@ import (
 	"github.com/pingcap/tidb/ast"
 	"github.com/pingcap/tidb/context"
 	"github.com/pingcap/tidb/expression"
-	"github.com/pingcap/tidb/mysql"
-	"github.com/pingcap/tidb/sessionctx/variable"
 	"github.com/pingcap/tidb/table"
 	"github.com/pingcap/tidb/util/types"
 )
@@ -77,11 +75,17 @@ func (e *NewUpdateExec) Next() (*Row, error) {
 		newTableData := newData[offset : offset+len(tbl.WritableCols())]
 		_, ok := e.updatedRowKeys[tbl][handle]
 		if ok {
-			// Each matching row is updated once, even if it matches the conditions multiple times.
+			// Each matched row is updated once, even if it matches the conditions multiple times.
 			continue
 		}
 		// Update row
-		err1 := newUpdateRecord(e.ctx, handle, oldData, newTableData, columns, tbl, offset, false)
+		touched := make(map[int]bool, len(tbl.Cols()))
+		for i, asgn := range columns {
+			if asgn != nil {
+				touched[i] = true
+			}
+		}
+		err1 := updateRecord(e.ctx, handle, oldData, newTableData, touched, tbl, offset, false)
 		if err1 != nil {
 			return nil, errors.Trace(err1)
 		}
@@ -146,107 +150,6 @@ func (e *NewUpdateExec) getTableOffset(entry RowKeyEntry) int {
 		}
 	}
 	return 0
-}
-
-func newUpdateRecord(ctx context.Context, h int64, oldData, newData []types.Datum, updateColumns map[int]*expression.Assignment, t table.Table, offset int, onDuplicateUpdate bool) error {
-	cols := t.Cols()
-	touched := make(map[int]bool, len(cols))
-
-	assignExists := false
-	var newHandle types.Datum
-	for i, asgn := range updateColumns {
-		if asgn == nil {
-			continue
-		}
-		if i < offset || i >= offset+len(cols) {
-			// The assign expression is for another table, not this.
-			continue
-		}
-
-		colIndex := i - offset
-		col := cols[colIndex]
-		if col.IsPKHandleColumn(t.Meta()) {
-			newHandle = newData[i]
-		}
-		if mysql.HasAutoIncrementFlag(col.Flag) {
-			if newData[i].IsNull() {
-				return errors.Errorf("Column '%v' cannot be null", col.Name.O)
-			}
-			val, err := newData[i].ToInt64()
-			if err != nil {
-				return errors.Trace(err)
-			}
-			t.RebaseAutoID(val, true)
-		}
-
-		touched[colIndex] = true
-		assignExists = true
-	}
-
-	// If no assign list for this table, no need to update.
-	if !assignExists {
-		return nil
-	}
-
-	// Check whether new value is valid.
-	if err := table.CastValues(ctx, newData, cols); err != nil {
-		return errors.Trace(err)
-	}
-
-	if err := table.CheckNotNull(cols, newData); err != nil {
-		return errors.Trace(err)
-	}
-
-	// If row is not changed, we should do nothing.
-	rowChanged := false
-	for i := range oldData {
-		if !touched[i] {
-			continue
-		}
-
-		n, err := newData[i].CompareDatum(oldData[i])
-		if err != nil {
-			return errors.Trace(err)
-		}
-		if n != 0 {
-			rowChanged = true
-			break
-		}
-	}
-	if !rowChanged {
-		// See https://dev.mysql.com/doc/refman/5.7/en/mysql-real-connect.html  CLIENT_FOUND_ROWS
-		if variable.GetSessionVars(ctx).ClientCapability&mysql.ClientFoundRows > 0 {
-			variable.GetSessionVars(ctx).AddAffectedRows(1)
-		}
-		return nil
-	}
-
-	var err error
-	if !newHandle.IsNull() {
-		err = t.RemoveRecord(ctx, h, oldData)
-		if err != nil {
-			return errors.Trace(err)
-		}
-		_, err = t.AddRecord(ctx, newData)
-	} else {
-		// Update record to new value and update index.
-		err = t.UpdateRecord(ctx, h, oldData, newData, touched)
-	}
-	if err != nil {
-		return errors.Trace(err)
-	}
-	dirtyDB := getDirtyDB(ctx)
-	tid := t.Meta().ID
-	dirtyDB.deleteRow(tid, h)
-	dirtyDB.addRow(tid, h, newData)
-
-	// Record affected rows.
-	if !onDuplicateUpdate {
-		variable.GetSessionVars(ctx).AddAffectedRows(1)
-	} else {
-		variable.GetSessionVars(ctx).AddAffectedRows(2)
-	}
-	return nil
 }
 
 // Fields implements Executor Fields interface.
